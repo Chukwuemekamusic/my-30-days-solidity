@@ -5,18 +5,22 @@ import {IDepositBox} from "./IDepositBox.sol";
 import {BasicDepositBox} from "./BasicDepositBox.sol";
 import {PremiumDepositBox} from "./PremiumDepositBox.sol";
 import {TimeLockedDepositBox} from "./TimeLockedDepositBox.sol";
+import {BoxType, BoxTypeLib} from "./BoxTypes.sol";
 
 
-contract VaultManger {
+contract VaultManager {
+    using BoxTypeLib for BoxType;
+
     error VaultManager_InvalidLockDuration();
     error VaultManager_BoxNotFound();
     error VaultManager_NotBoxOwner();
     error VaultManager_NoBoxType();
     error VaultManager_ZeroAddress();
+    error VaultManager_InvalidBoxType();
 
     struct BoxRegistry {
         IDepositBox boxContract;
-        string boxType;
+        BoxType boxType;
         address currentOwner;
         address originalOwner;
         uint256 createdAt;
@@ -26,7 +30,7 @@ contract VaultManger {
 
     mapping (uint256 => BoxRegistry) public boxes;
     mapping(address => uint256[]) userBoxes;
-    mapping(string => uint256) public boxTypeCount;
+    mapping(BoxType => uint256) public boxTypeCount;
 
     uint256 public boxCount;
     uint256 private boxesDeactivated;
@@ -61,17 +65,17 @@ contract VaultManger {
 
     function createBasicBox() external returns(uint256) {
         BasicDepositBox newBox = new BasicDepositBox();
-        return _registerBox(IDepositBox(newBox), "Basic", msg.sender);
+        return _registerBox(IDepositBox(newBox), BoxType.Basic, msg.sender);
     }
     
     function createPremiumBox() external returns(uint256) {
         PremiumDepositBox newBox = new PremiumDepositBox();
-        return _registerBox(IDepositBox(newBox), "Premium", msg.sender);
+        return _registerBox(IDepositBox(newBox), BoxType.Premium, msg.sender);
     }
     function createTimeLockedBox(uint256 lockDuration) external returns(uint256) {
         if (lockDuration == 0) revert VaultManager_InvalidLockDuration();
         TimeLockedDepositBox newBox = new TimeLockedDepositBox(lockDuration);
-        return _registerBox(IDepositBox(newBox), "TimeLocked", msg.sender);
+        return _registerBox(IDepositBox(newBox), BoxType.TimeLocked, msg.sender);
     }
 
     // ======================
@@ -154,19 +158,35 @@ contract VaultManger {
         return activeBoxes;
     }
 
-    function getBoxesByType(string calldata boxType) external view returns (uint256[] memory) {
+    function getBoxesByType(BoxType boxType) external view returns (uint256[] memory) {
+        if (!boxType.isValid()) revert VaultManager_InvalidBoxType();
+
         uint256 count = boxTypeCount[boxType];
         uint256[] memory result = new uint256[](count);
         uint256 index = 0;
-        bytes32 boxTypeHash = keccak256(abi.encodePacked(boxType));
 
         for (uint256 i = 0; i < boxCount; i++) {
-            if (boxes[i].isActive && _isEqualWithHash(boxes[i].boxType, boxTypeHash)) {
+            if (boxes[i].isActive && boxes[i].boxType == boxType) {
                 result[index] = i;
                 index++;
             }
         }
         return result;
+    }
+
+     // ✅ Get all available box types
+    function getAvailableBoxTypes() external pure returns (BoxType[] memory) {
+        return BoxTypeLib.getAllTypes();
+    }
+
+    function isBoxOwner(uint256 boxId, address user) external view returns (bool) {
+        if (!_ifBoxExists(boxId)) return false;
+        return boxes[boxId].currentOwner == user && boxes[boxId].isActive;
+    }
+
+    function getBoxContract(uint256 boxId) external view returns (address) {
+        _validateBoxExists(boxId);
+        return address(boxes[boxId].boxContract);
     }
     
     
@@ -176,10 +196,11 @@ contract VaultManger {
 
     function _registerBox(
         IDepositBox boxContract,
-        string memory boxType,
+        BoxType boxType,
         address owner
     ) internal returns (uint256) {
         uint256 boxId = boxCount++;
+        boxType.isValid();
 
         boxes[boxId] = BoxRegistry({
             boxContract: boxContract, 
@@ -193,7 +214,7 @@ contract VaultManger {
 
         userBoxes[owner].push(boxId);
         boxTypeCount[boxType]++;
-        emit BoxCreated(boxId, boxType, owner, address(boxContract));
+        emit BoxCreated(boxId, boxType.toString(), owner, address(boxContract));
         return boxId;
     }
 
@@ -228,8 +249,8 @@ contract VaultManger {
         userBoxes[newOwner].push(boxId);
     }
 
-    function _isEqualWithHash(string memory a, bytes32 boxTypeHash) internal pure returns (bool) {
-        return keccak256(abi.encodePacked(a)) == boxTypeHash;
-    }
+    // function _isEqualWithHash(string memory a, bytes32 boxTypeHash) internal pure returns (bool) {
+    //     return keccak256(abi.encodePacked(a)) == boxTypeHash;
+    // }
 
 }

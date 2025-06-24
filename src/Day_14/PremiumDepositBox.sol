@@ -2,6 +2,7 @@
 pragma solidity ^0.8.17;
 
 import {BaseDepositBox} from "./BaseDepositBox.sol";
+import {BoxType} from "./BoxTypes.sol";
 
 contract PremiumDepositBox is BaseDepositBox {
     string private metadata;
@@ -15,8 +16,8 @@ contract PremiumDepositBox is BaseDepositBox {
         _;
     }
 
-    function getBoxType() external pure override returns (string memory) {
-        return "Premium";
+    function getBoxType() external pure override returns (BoxType) {
+        return BoxType.Premium;
     }
 
     function getSecret() public view override onlyAuthorizedViewers returns(string memory){

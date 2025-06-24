@@ -2,6 +2,7 @@
 pragma solidity ^0.8.17;
 
 import {BaseDepositBox} from "./BaseDepositBox.sol";
+import {BoxType} from "./BoxTypes.sol";
 
 contract TimeLockedDepositBox is BaseDepositBox {
     error TimeLockedDepositBox_TimeLocked();
@@ -17,12 +18,12 @@ contract TimeLockedDepositBox is BaseDepositBox {
         unlockTime = block.timestamp + lockDuration;
     }
 
-    function getBoxType() external pure override returns (string memory) {
-        return "TimeLocked";
+    function getBoxType() external pure override returns (BoxType) {
+        return BoxType.TimeLocked;
     }
 
     function getSecret() public view override onlyOwner timeUnlocked returns (string memory) {
-        return super.getSecret();
+        return _revealSecret();
     }
 
     function getUnlockTime() external view returns (uint256) {
