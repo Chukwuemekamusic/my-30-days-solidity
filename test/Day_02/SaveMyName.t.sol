@@ -2,8 +2,8 @@
 pragma solidity ^0.8.17;
 
 import {Test, console} from "forge-std/Test.sol";
-import {SaveMyName} from "../src/SaveMyName.sol";
-import {DeploySaveMyName} from "../script/SaveMyName.s.sol";
+import {SaveMyName} from "../../src/Day_02/SaveMyName.sol";
+import {DeploySaveMyName} from "../../script/Day_02/SaveMyName.s.sol";
 
 contract SaveMyNameTest is Test {
     SaveMyName saveMyName;
