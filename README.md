@@ -36,8 +36,8 @@ You can use this repository to follow my progress, review my solutions, or even 
 1.  **Clone the repository:**
 
     ```sh
-    git clone <your-repo-url>
-    cd <your-repo-name>
+    git clone git@github.com:Chukwuemekamusic/my-30-days-solidity.git
+    cd my-30days-solidity
     ```
 
 2.  **Install dependencies:**
